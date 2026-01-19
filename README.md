@@ -141,8 +141,8 @@ MCP_SERVER_BASE_URL=http://localhost:8000
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/fastmcp-keycloak-oauth-proxy-demo.git
-cd fastmcp-keycloak-oauth-proxy-demo
+git clone https://github.com/vikrantjain/mcp-oauth-proxy-demo.git
+cd mcp-oauth-proxy-demo
 
 # Install dependencies
 uv sync
@@ -155,8 +155,8 @@ python mcp-server.py
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/fastmcp-keycloak-oauth-proxy-demo.git
-cd fastmcp-keycloak-oauth-proxy-demo
+git clone https://github.com/vikrantjain/mcp-oauth-proxy-demo.git
+cd mcp-oauth-proxy-demo
 
 # Create virtual environment
 python -m venv .venv
