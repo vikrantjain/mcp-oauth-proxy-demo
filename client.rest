@@ -1,0 +1,124 @@
+
+### Step 1: Initialize MCP Connection
+# Run this first to get the session ID from the response headers
+# @name session
+POST http://localhost:8000/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "initialize",
+  "params": {
+    "protocolVersion": "2024-11-05",
+    "capabilities": {},
+    "clientInfo": {
+      "name": "test-client",
+      "version": "1.0.0"
+    }
+  }
+}
+
+###
+# resource metadata from above call
+GET http://localhost:8000/.well-known/oauth-protected-resource/mcp
+
+
+### Step 2+: List Available Tools
+# Copy the mcp-session-id from the initialize response and paste it below
+POST http://localhost:8000/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{session.response.headers.mcp-session-id}}
+
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "tools/list"
+}
+
+###
+
+### Call the greet Tool
+POST http://localhost:8000/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{session.response.headers.mcp-session-id}}
+
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "method": "tools/call",
+  "params": {
+    "name": "greet",
+    "arguments": {
+      "name": "Vikrant"
+    }
+  }
+}
+
+###
+
+### List Available Resources
+POST http://localhost:8000/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{session.response.headers.mcp-session-id}}
+
+{
+  "jsonrpc": "2.0",
+  "id": 4,
+  "method": "resources/list"
+}
+
+###
+
+### Read Profile Resource
+POST http://localhost:8000/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{session.response.headers.mcp-session-id}}
+
+{
+  "jsonrpc": "2.0",
+  "id": 5,
+  "method": "resources/read",
+  "params": {
+    "uri": "resource://profile"
+  }
+}
+
+###
+
+### List Available Prompts
+POST http://localhost:8000/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{session.response.headers.mcp-session-id}}
+
+{
+  "jsonrpc": "2.0",
+  "id": 6,
+  "method": "prompts/list"
+}
+
+###
+
+### Get Prompt about AI
+POST http://localhost:8000/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{session.response.headers.mcp-session-id}}
+
+{
+  "jsonrpc": "2.0",
+  "id": 7,
+  "method": "prompts/get",
+  "params": {
+    "name": "ask_about_topic",
+    "arguments": {
+      "topic": "AI"
+    }
+  }
+}

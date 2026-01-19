@@ -1,0 +1,162 @@
+# ============================================================================
+# FastMCP OAuth Proxy - Complete Authorization Flow Demo
+# ============================================================================
+# This file demonstrates the full OAuth flow with Keycloak using FastMCP's
+# OAuth Proxy pattern. The proxy bridges MCP's Dynamic Client Registration
+# expectations with Keycloak's manual client registration requirement.
+#
+# IMPORTANT: Update the credentials below with your actual Keycloak values
+# ============================================================================
+
+@client_id=mcp_server
+@client_secret=iXfXUESiySOiXsnq019spLF513oaduVF
+@base_url=http://localhost:8080
+@realm=master
+
+###
+# @name openid_config
+GET {{base_url}}/realms/{{realm}}/.well-known/openid-configuration
+###
+# oauth authorization server config
+GET {{base_url}}/realms/{{realm}}/.well-known/oauth-authorization-server
+
+
+### Variables (will be updated as we progress)
+@mcpServerBase = http://127.0.0.1:8000
+@clientName = mcp_client_rest
+@redirectUri = http://localhost:9000/oauth/callback
+
+# PKCE Variables (generate fresh values for each session)
+@codeVerifier = dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk
+@codeChallenge = E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM
+@state = random-state-string-abc123
+
+# Variables to be filled during the flow
+@clientId = {{client_register.response.body.$.client_id}}
+
+### Step 1: Initialize MCP Connection fails with 401 Unauthorized
+# Run this step to get resource metadata url
+POST http://localhost:8000/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "initialize",
+  "params": {
+    "protocolVersion": "2024-11-05",
+    "capabilities": {},
+    "clientInfo": {
+      "name": "{{clientName}}",
+      "version": "1.0.0"
+    }
+  }
+}
+
+###
+# Step 2: Get resource metadata from url obtained from step 1 call
+# @name resource_metadata
+GET http://localhost:8000/.well-known/oauth-protected-resource/mcp
+
+
+### STEP 3: Register OAuth Client
+# @name client_register
+POST {{mcpServerBase}}/register
+Content-Type: application/json
+
+{
+  "client_name": "{{clientName}}",
+  "client_uri": "{{redirectUri}}",
+  "redirect_uris": ["{{redirectUri}}"],
+  "grant_types": ["authorization_code", "refresh_token"],
+  "response_types": ["code"],
+  "token_endpoint_auth_method": "none",
+  "application_type": "native"
+}
+
+
+### STEP 4: Generate Authorization URL and Authenticate
+# Generate Authorization URL (Without Scopes - Minimal)
+# Add client_id from the response of step 3
+http://localhost:8000/authorize?response_type=code&client_id=a9a77ab4-48d9-4ec0-931d-47d210e23454&redirect_uri=http%3A%2F%2Flocalhost%3A9000%2Foauth%2Fcallback&state=random-state-string-abc123&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM&code_challenge_method=S256
+
+# After authentication, you'll get redirected to:
+http://localhost:9000/oauth/callback?code=t1K0QH4B5TUmU-bTwu86NWBXAjw1PUn4S2NAw3eVkhY&state=random-state-string-abc123
+
+# The browser will show "This site can't be reached" - that's expected!
+# Just copy the "code" parameter from the URL in your browser's address bar
+#
+# RESULT: 
+# Copy the "code" parameter from the callback URL and update:
+@authCode=t1K0QH4B5TUmU-bTwu86NWBXAjw1PUn4S2NAw3eVkhY
+
+### STEP 5: Exchange Authorization Code for Tokens
+# @name get_token
+POST {{mcpServerBase}}/token
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=authorization_code&code={{authCode}}&redirect_uri=http%3A//localhost%3A9000/oauth/callback&client_id={{clientId}}&code_verifier=dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk&audience=mcp_server
+
+### ✅ STEP 6 RESULT: 
+# Copy tokens from the response and update variables:
+@access_token={{get_token.response.body.$.access_token}}
+@token_type=bearer
+@refresh_token={{get_token.response.body.$.refresh_token}}
+
+
+### Step 7: Initialize MCP Connection with access token
+# Run this first to get the session ID from the response headers
+# @name session
+POST http://localhost:8000/mcp
+Content-Type: application/json
+Authorization: Bearer {{access_token}}
+Accept: application/json, text/event-stream
+
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "initialize",
+  "params": {
+    "protocolVersion": "2024-11-05",
+    "capabilities": {},
+    "clientInfo": {
+      "name": "{{clientName}}",
+      "version": "1.0.0"
+    }
+  }
+}
+
+
+### Step 8: List Available Tools
+POST http://localhost:8000/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+Authorization: Bearer {{access_token}}
+mcp-session-id: {{session.response.headers.mcp-session-id}}
+
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "tools/list"
+}
+
+
+### Call the greet Tool
+POST http://localhost:8000/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+Authorization: Bearer {{access_token}}
+mcp-session-id: {{session.response.headers.mcp-session-id}}
+
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "method": "tools/call",
+  "params": {
+    "name": "greet",
+    "arguments": {
+      "name": "Vikrant"
+    }
+  }
+}
